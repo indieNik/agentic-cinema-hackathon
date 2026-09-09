@@ -6,7 +6,7 @@ A multi-agent development crew, built on Gemini, that researches a film or serie
 > Built in one night for **Agentic Cinema: The Blockbuster Hackathon** (Google Cloud), **Parallel track**.
 
 - **Live demo:** https://greenlight-p2jahd237a-uc.a.run.app
-- **Video:** VIDEO_URL
+- **Video:** https://youtu.be/3_YwNN2kpOI
 - **Source:** https://github.com/indieNik/agentic-cinema-hackathon
 
 ## The problem

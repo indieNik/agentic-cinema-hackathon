@@ -1,6 +1,6 @@
 # Devpost submission — copy-paste sheet
 
-Everything below maps 1:1 to the Devpost form fields. Replace `VIDEO_URL` after uploading.
+Everything below maps 1:1 to the Devpost form fields. Replace `https://youtu.be/3_YwNN2kpOI` after uploading.
 
 ---
 
@@ -68,7 +68,7 @@ https://github.com/indieNik/agentic-cinema-hackathon
 
 **Video demo link**
 ```
-VIDEO_URL
+https://youtu.be/3_YwNN2kpOI
 ```
 
 ## Additional info
