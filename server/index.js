@@ -62,10 +62,18 @@ app.post('/api/greenlight', async (req, res) => {
     'X-Accel-Buffering': 'no',
   });
   res.flushHeaders?.();
+  res.socket?.setNoDelay?.(true);
+  res.socket?.setKeepAlive?.(true);
+  // Note: `req.on('close')` is the wrong signal here — in Node 16+ it fires as soon as the request body has been
+  // consumed, i.e. immediately after express.json(), which would silently drop every later event. The *response*
+  // close event fires when the client disconnects (or after res.end()).
   let open = true;
-  req.on('close', () => (open = false));
-  const send = (event) => open && res.write(`data: ${JSON.stringify(event)}\n\n`);
-  const heartbeat = setInterval(() => open && res.write(': ping\n\n'), 15_000);
+  res.on('close', () => (open = false));
+  const send = (event) => {
+    if (!open || res.writableEnded || res.destroyed) return;
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+  const heartbeat = setInterval(() => open && !res.writableEnded && res.write(': ping\n\n'), 15_000);
 
   try {
     await runCrew(brief, send);

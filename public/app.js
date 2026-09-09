@@ -44,25 +44,53 @@
 
   function setBusy(b) { runBtn.disabled = b; $('.btn-label', runBtn).textContent = b ? 'Crew is working…' : 'Run the crew'; }
 
+  let ticker = null, watchdog = null, controller = null, lastEventAt = 0, startedAt = 0, gotMemo = false, specialistsDone = 0;
+  const STALL_MS = 75_000;
+
+  function setSub(text) { $('#crew-sub').textContent = text; }
+  function phaseText() {
+    const secs = Math.round((Date.now() - startedAt) / 1000);
+    if (gotMemo) return `Done in ${secs}s.`;
+    if (specialistsDone >= 3) return `Head of Development is writing the memo… ${secs}s`;
+    return `${3 - specialistsDone} of 3 specialists still researching · ${secs}s elapsed · usually finishes in about a minute`;
+  }
+  function note(kind, msg, retry) {
+    let n = $('#crew-note'); if (!n) { n = el('div', 'crew-note'); n.id = 'crew-note'; crewView.insertBefore(n, crewGrid); }
+    n.className = `crew-note ${kind}`; n.innerHTML = `<span>${esc(msg)}</span>`;
+    if (retry) { const b = el('button', 'btn ghost small', 'Try again'); b.addEventListener('click', () => run(retry)); n.appendChild(b); }
+    n.hidden = false;
+  }
+  function clearNote() { const n = $('#crew-note'); if (n) n.hidden = true; }
+  function stopTimers() { clearInterval(ticker); clearTimeout(watchdog); ticker = watchdog = null; }
+  function armWatchdog(brief) {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => { controller?.abort(); note('error', 'The crew went quiet for over a minute, so we stopped the run.', brief); markUnfinished('error'); }, STALL_MS);
+  }
+  function markUnfinished(status) { for (const c of cards.values()) if ($('.status', c).dataset.status !== 'done') setStatus(c, status); }
+
   async function run(brief) {
     setBusy(true);
-    memoView.hidden = true; memoView.innerHTML = ''; lastMemo = null;
-    crewGrid.innerHTML = ''; cards.clear();
-    crewView.hidden = false;
+    memoView.hidden = true; memoView.innerHTML = ''; lastMemo = null; gotMemo = false; specialistsDone = 0;
+    crewGrid.innerHTML = ''; cards.clear(); clearNote();
+    crewView.hidden = false; setSub('Starting the crew…');
     crewView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    startedAt = Date.now(); lastEventAt = startedAt;
+    controller = new AbortController();
+    ticker = setInterval(() => setSub(phaseText()), 1000);
 
     let res;
     try {
-      res = await fetch('/api/greenlight', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(brief) });
-    } catch { showError('Could not reach the server.'); setBusy(false); return; }
+      res = await fetch('/api/greenlight', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(brief), signal: controller.signal });
+    } catch { stopTimers(); note('error', 'Could not reach the server.', brief); setBusy(false); return; }
     if (!res.ok) {
       let msg = `Request failed (${res.status}).`;
       try { msg = (await res.json()).error || msg; } catch {}
-      showError(msg); setBusy(false); crewView.hidden = true; return;
+      stopTimers(); note('error', msg, brief); setBusy(false); return;
     }
+    armWatchdog(brief);
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
-    let buf = '';
+    let buf = '', sawError = false;
     try {
       while (true) {
         const { value, done } = await reader.read();
@@ -73,11 +101,15 @@
           const chunk = buf.slice(0, idx); buf = buf.slice(idx + 2);
           for (const line of chunk.split('\n')) {
             if (!line.startsWith('data:')) continue;
-            try { handle(JSON.parse(line.slice(5).trim()), brief); } catch (err) { console.warn('bad event', err); }
+            lastEventAt = Date.now(); armWatchdog(brief);
+            try { const ev = JSON.parse(line.slice(5).trim()); if (ev.type === 'error') sawError = true; handle(ev, brief); } catch (err) { console.warn('bad event', err); }
           }
         }
       }
-    } finally { setBusy(false); }
+      if (!gotMemo && !sawError && !controller.signal.aborted) { note('error', 'The connection closed before the memo arrived. Please try again.', brief); markUnfinished('error'); }
+    } catch (err) {
+      if (!controller.signal.aborted) { note('error', 'The connection dropped mid-run. Please try again.', brief); markUnfinished('error'); }
+    } finally { stopTimers(); setSub(phaseText()); setBusy(false); }
   }
 
   function handle(ev, brief) {
@@ -91,6 +123,12 @@
       case 'agent_status': {
         const c = cards.get(ev.agent); if (!c) return;
         setStatus(c, ev.status);
+        const feed = $('.feed', c);
+        if (ev.status === 'thinking' && ev.agent !== 'head' && !feed.children.length) {
+          const li = el('li', 'feed-item note'); li.appendChild(el('span', 'spinner')); li.appendChild(el('span', null, 'Reading the pitch and planning searches…')); feed.appendChild(li);
+        }
+        if (ev.status === 'done' || ev.status === 'searching') feed.querySelectorAll('.feed-item.note').forEach((n) => n.remove());
+        if (ev.status === 'done' && ev.agent !== 'head') specialistsDone += 1;
         if (ev.agent === 'head' && ev.status === 'thinking') {
           const li = el('li', 'feed-item writing'); li.appendChild(el('span', 'spinner')); li.appendChild(el('span', null, 'Reading the reports and writing the memo…'));
           $('.feed', c).appendChild(li);
@@ -103,6 +141,7 @@
       }
       case 'search': {
         const c = cards.get(ev.agent); if (!c) return;
+        $('.feed', c).querySelectorAll('.feed-item.note').forEach((n) => n.remove());
         const li = el('li', 'feed-item'); li.dataset.pending = '1';
         const tag = el('span', 'feed-tag', 'Parallel search');
         li.appendChild(tag);
@@ -129,10 +168,10 @@
         const li = $('.feed-item[data-pending="1"]', c); if (li) { delete li.dataset.pending; $('.results', li).innerHTML = `<span class="feed-error">${esc(ev.message)}</span>`; }
         break;
       }
-      case 'memo': renderMemo(ev.memo, ev.meta, brief); break;
+      case 'memo': gotMemo = true; clearNote(); renderMemo(ev.memo, ev.meta, brief); break;
       case 'error': {
-        showError(ev.message);
-        for (const c of cards.values()) if ($('.status', c).dataset.status !== 'done') setStatus(c, 'error');
+        note('error', ev.message || 'The crew hit an unexpected error.', brief);
+        markUnfinished('error');
         break;
       }
       case 'done': break;
