@@ -1,6 +1,6 @@
 # Devpost submission — copy-paste sheet
 
-Everything below maps 1:1 to the Devpost form fields. Replace `https://youtu.be/3_YwNN2kpOI` after uploading.
+Everything below maps 1:1 to the Devpost form fields. Submitted 10 Sep 2026; demo video: https://youtu.be/3_YwNN2kpOI
 
 ---
 
