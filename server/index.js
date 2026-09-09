@@ -1,7 +1,7 @@
 /**
  * Greenlight — HTTP server.
  *   GET  /            static UI (public/)
- *   GET  /healthz     liveness + which integrations are configured
+ *   GET  /api/health     liveness + which integrations are configured
  *   POST /api/greenlight  { logline, title?, format?, genre?, budgetTier? } → Server-Sent Events stream of crew activity, ending with the memo
  */
 import express from 'express';
@@ -17,7 +17,7 @@ app.disable('x-powered-by');
 app.use(express.json({ limit: '32kb' }));
 app.use(express.static(path.join(__dirname, '..', 'public'), { extensions: ['html'], maxAge: '1h' }));
 
-app.get('/healthz', (_req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ ok: true, model: MODEL, gemini: Boolean(process.env.GEMINI_API_KEY), parallel: Boolean(process.env.PARALLEL_API_KEY) });
 });
 

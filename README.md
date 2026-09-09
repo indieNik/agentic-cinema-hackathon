@@ -68,7 +68,7 @@ The script enables the APIs, stores both keys in Secret Manager, grants the Clou
 ## API
 
 `POST /api/greenlight` → `text/event-stream`. Events: `run_start`, `agent_status` (`waiting|thinking|searching|done`), `search` (objective + queries), `search_result` (count + sources), `search_error`, `memo` (the structured memo + specialist reports + timing), `error`, `done`.
-`GET /healthz` reports which integrations are configured.
+`GET /api/health` reports which integrations are configured.
 
 ## What we learned
 

@@ -11,7 +11,7 @@ A multi-agent "development crew" on Gemini that researches a film/series logline
 - Keep the repo public, MIT licensed, and runnable from the README alone.
 
 ## Layout
-- `server/index.js` HTTP: static `public/`, `GET /healthz`, `GET /api/crew`, `POST /api/greenlight` (SSE). In-memory rate limit per IP.
+- `server/index.js` HTTP: static `public/`, `GET /api/health`, `GET /api/crew`, `POST /api/greenlight` (SSE). In-memory rate limit per IP.
 - `server/agents.js` The crew. `SPECIALISTS` (prompts), `searchTool` (function declaration), `runSpecialist` (tool loop), `memoSchema` + `writeMemo` (structured output), `runCrew` (fan-out / fan-in). Every step calls `emit(event)`; the UI depends on those event shapes.
 - `server/parallel.js` Thin wrapper over `parallel-web`'s `client.search`. `PARALLEL_MOCK=1` returns fixtures in non-production only.
 - `public/` `index.html` (shell + `<template id="agent-card">`), `styles.css` (tokens at the top, light/dark via `prefers-color-scheme`), `app.js` (SSE parsing, crew cards, memo rendering, markdown export).

@@ -47,4 +47,4 @@ $G run deploy "$SERVICE" \
 
 URL=$($G run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
 echo "deployed: $URL"
-curl -fsS "$URL/healthz" && echo
+curl -fsS "$URL/api/health" && echo
