@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Greenlight — from logline to greenlight memo</title>
+  <meta name="description" content="A crew of Gemini agents researches your logline with Parallel Search and writes the memo a studio exec would." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%231E8E3E'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/" aria-label="Greenlight home">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>Greenlight</span>
+    </a>
+    <nav class="stack-pills" aria-label="Built with">
+      <span class="pill"><span class="pill-dot g"></span>Gemini</span>
+      <span class="pill"><span class="pill-dot p"></span>Parallel Search</span>
+      <span class="pill"><span class="pill-dot c"></span>Cloud Run</span>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- 1. Pitch -->
+    <section id="pitch" class="view">
+      <div class="hero">
+        <h1>Every film starts with a <em>greenlight</em>.</h1>
+        <p class="lede">Paste a logline. A crew of Gemini agents researches comps, audience and risk on the live web with Parallel, then writes the memo a studio exec would.</p>
+      </div>
+
+      <form id="pitch-form" class="card pitch-card" autocomplete="off">
+        <label class="field">
+          <span class="label">Logline</span>
+          <textarea id="logline" name="logline" rows="3" required minlength="20" maxlength="1500" placeholder="A burnt-out wedding planner has 72 hours to stop her biggest client from marrying the man she was once engaged to…"></textarea>
+        </label>
+        <div class="row">
+          <label class="field grow">
+            <span class="label">Working title <span class="muted">optional</span></span>
+            <input id="title" name="title" type="text" maxlength="120" placeholder="Untitled" />
+          </label>
+          <label class="field">
+            <span class="label">Format</span>
+            <select id="format" name="format">
+              <option>Feature film</option>
+              <option>Limited series</option>
+              <option>Returning series</option>
+              <option>Documentary</option>
+              <option>Short</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Budget tier</span>
+            <select id="budgetTier" name="budgetTier">
+              <option value="">Unsure</option>
+              <option>Micro (under $2M)</option>
+              <option>Indie ($2–20M)</option>
+              <option>Mid ($20–80M)</option>
+              <option>Tentpole ($80M+)</option>
+            </select>
+          </label>
+        </div>
+        <div class="row between">
+          <div class="samples" aria-label="Sample loglines">
+            <span class="muted">Try:</span>
+            <button type="button" class="chip" data-sample="0">Rom-com</button>
+            <button type="button" class="chip" data-sample="1">Sci-fi thriller</button>
+            <button type="button" class="chip" data-sample="2">True-crime doc</button>
+          </div>
+          <button id="run" class="btn primary" type="submit">
+            <span class="btn-label">Run the crew</span>
+            <span class="btn-arrow" aria-hidden="true">→</span>
+          </button>
+        </div>
+        <p id="form-error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <!-- 2. Crew at work -->
+    <section id="crew" class="view" hidden>
+      <div class="section-head">
+        <h2>The crew is working</h2>
+        <p class="muted" id="crew-sub">Three specialists research in parallel. Then the Head of Development writes the memo.</p>
+      </div>
+      <div id="crew-grid" class="crew-grid"></div>
+    </section>
+
+    <!-- 3. Memo -->
+    <section id="memo" class="view" hidden></section>
+  </main>
+
+  <footer class="foot">
+    <span>Built for Agentic Cinema · The Blockbuster Hackathon</span>
+    <span class="muted">Gemini via google-genai · Parallel Search API · Google Cloud Run + Secret Manager</span>
+  </footer>
+
+  <template id="agent-card">
+    <article class="card agent" data-agent="">
+      <header class="agent-head">
+        <div class="avatar" aria-hidden="true"></div>
+        <div class="agent-id">
+          <h3 class="agent-name"></h3>
+          <p class="agent-role muted"></p>
+        </div>
+        <span class="status" data-status="waiting"><span class="status-dot"></span><span class="status-text">Waiting</span></span>
+      </header>
+      <ol class="feed" aria-live="polite"></ol>
+      <details class="findings" hidden>
+        <summary>Findings</summary>
+        <div class="findings-body"></div>
+      </details>
+    </article>
+  </template>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
