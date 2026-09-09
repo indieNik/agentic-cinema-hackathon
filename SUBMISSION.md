@@ -1,6 +1,6 @@
 # Devpost submission — copy-paste sheet
 
-Everything below maps 1:1 to the Devpost form fields. Submitted 10 Sep 2026; demo video: https://youtu.be/3_YwNN2kpOI
+Everything below maps 1:1 to the Devpost form fields. Submitted 10 Sep 2026; demo video: https://youtu.be/t5WU0RFd6SE
 
 ---
 
@@ -68,7 +68,7 @@ https://github.com/indieNik/agentic-cinema-hackathon
 
 **Video demo link**
 ```
-https://youtu.be/3_YwNN2kpOI
+https://youtu.be/t5WU0RFd6SE
 ```
 
 ## Additional info
