@@ -38,3 +38,4 @@ Smoke test without the UI: `node -e "import('./server/agents.js').then(m=>m.runC
 ## Docs
 - `docs/decisions/` ADRs, one per non-obvious decision. Add one when you change architecture, a prompt strategy, or a partner integration.
 - `SUBMISSION.md` the Devpost submission copy. Keep it in sync with what the app actually does.
+- Cross-hackathon tracking (registrations, briefs, results) does not live here. It has its own private workspace at `~/Projects/AI-Projects/hackathons`; this repo stays about Greenlight only.
