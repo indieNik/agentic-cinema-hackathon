@@ -39,3 +39,9 @@ Smoke test without the UI: `node -e "import('./server/agents.js').then(m=>m.runC
 - `docs/decisions/` ADRs, one per non-obvious decision. Add one when you change architecture, a prompt strategy, or a partner integration.
 - `SUBMISSION.md` the Devpost submission copy. Keep it in sync with what the app actually does.
 - Cross-hackathon tracking (registrations, briefs, results) does not live here. It has its own private workspace at `~/Projects/AI-Projects/hackathons`; this repo stays about Greenlight only.
+
+---
+
+## Publishing Doctrine (September 2026)
+
+Nothing we publish uses a bare name. Canonical rules + naming register live in the IgniteAI repo: `~/Projects/AI-Projects/AI UGC Ad Video Builder/docs/strategic/PUBLISHING_DOCTRINE.md`. The five rules, so this file works on its own: (1) **always pair the name with its category** in the first sentence of every title, description, README heading, repo description, og:title and llms.txt ("<PRODUCT>, <category>"; "Nikhil Patil, Bengaluru, builds AI products in public"); (2) **write for the phrase the buyer types**, not the name; (3) **post under the personal name and let the post carry the product**; (4) **say Bengaluru / India** where the product is India-facing — it is the disambiguator on every search; (5) **check collisions before naming anything** (bare name, "X AI", "XAI"). Why: measured 2026-09-22 — `IgniteAI` alone is owned by Instructure's Canvas product and `Nikhil Patil` alone by a cricketer and a Visa executive, while every paired search returns us first. This product's pairing: **Greenlight, a multi-agent development crew that turns a logline into a research-backed greenlight memo** (collision check: bare "Greenlight" is a Wikipedia disambiguation page, and in film it is Greenlight Coverage's $45 AI script-coverage service; "greenlight AI film" returns Cinelytic and Warner Bros stories, never us).

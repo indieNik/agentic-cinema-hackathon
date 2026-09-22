@@ -1,7 +1,7 @@
 # Greenlight
 
 **From logline to greenlight memo in about a minute.**
-A multi-agent development crew, built on Gemini, that researches a film or series pitch on the live web with the **Parallel Search API** and writes the memo a studio executive would.
+Greenlight is a multi-agent development crew, built on Gemini, that researches a film or series pitch on the live web with the **Parallel Search API** and writes the memo a studio executive would.
 
 > Built in one night for **Agentic Cinema: The Blockbuster Hackathon** (Google Cloud), **Parallel track**.
 
