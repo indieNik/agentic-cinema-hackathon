@@ -40,10 +40,10 @@ Cloud Run  ── Express (server/index.js)
    │     ├─ Risk & Competition ─┘   ≤2 search rounds, 2–5 queries per round, shared Parallel session
    │     └─ Head of Development ─► Gemini JSON-schema response → memo
    │
-   └─ secrets: GEMINI_API_KEY, PARALLEL_API_KEY injected from Secret Manager (never in the image)
+   └─ Gemini on Vertex AI as the service identity (no key); PARALLEL_API_KEY injected from Secret Manager (never in the image)
 ```
 
-**Google Cloud:** Gemini (`gemini-3.5-flash`) via the `@google/genai` SDK (function calling + structured output), Cloud Run, Cloud Build, Secret Manager, Cloud IAM (the service identity may read exactly two secrets).
+**Google Cloud:** Gemini (`gemini-2.5-flash`) on Vertex AI via the `@google/genai` SDK (function calling + structured output), Cloud Run, Cloud Build, Secret Manager, Cloud IAM (the service identity may read exactly the Parallel secret, and calls Vertex AI with `roles/aiplatform.user`). Until 2026-10-23 Gemini ran on a Google AI Studio key; see `docs/decisions/0002-gemini-on-vertex.md`.
 **Partner:** Parallel Search API via the official `parallel-web` SDK — it is the crew's *only* research tool and is called at runtime on every request (see `server/parallel.js` and the `search_web` tool in `server/agents.js`).
 
 ## Run it locally
@@ -51,19 +51,21 @@ Cloud Run  ── Express (server/index.js)
 ```bash
 git clone https://github.com/indieNik/agentic-cinema-hackathon && cd agentic-cinema-hackathon
 npm install
-cp .env.example .env     # add GEMINI_API_KEY (Google AI Studio) and PARALLEL_API_KEY (platform.parallel.ai)
+cp .env.example .env     # set VERTEX_PROJECT (a project with Vertex AI enabled) and PARALLEL_API_KEY (platform.parallel.ai)
 npm run dev              # http://localhost:8080
 ```
+
+Gemini uses Application Default Credentials (`gcloud auth application-default login`). If your ADC login cannot use `VERTEX_PROJECT`, set `VERTEX_ACCESS_TOKEN=$(gcloud auth print-access-token --account=<a login that can>)` for the run (it lasts about an hour). `GENAI_BACKEND=studio` with `GEMINI_API_KEY` uses a Google AI Studio key instead.
 
 `PARALLEL_MOCK=1 npm run dev` serves canned search results for UI work without spending credits (ignored in production).
 
 ## Deploy to Cloud Run
 
 ```bash
-GCLOUD_ACCOUNT=you@example.com GCLOUD_PROJECT=your-project GEMINI_API_KEY=... PARALLEL_API_KEY=... ./deploy.sh
+GCLOUD_ACCOUNT=you@example.com GCLOUD_PROJECT=your-project VERTEX_PROJECT=your-vertex-project PARALLEL_API_KEY=... ./deploy.sh
 ```
 
-The script enables the APIs, stores both keys in Secret Manager, grants the Cloud Run service account `secretmanager.secretAccessor` on those two secrets only, builds the image with Cloud Build and deploys with the secrets mounted as environment variables. Re-running it with no keys just redeploys.
+The Cloud Run service account (the project's default compute service account) needs `roles/aiplatform.user` on `VERTEX_PROJECT`; grant it once. The script enables the APIs, stores the Parallel key in Secret Manager, grants the service account `secretmanager.secretAccessor` on that secret only, builds the image with Cloud Build and deploys with the secrets mounted as environment variables. Re-running it with no keys just redeploys.
 
 ## API
 

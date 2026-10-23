@@ -38,6 +38,7 @@ Every search the agents run, every source they read and every status change stre
 - **Parallel Search API** (official `parallel-web` SDK) is that `search_web` tool — the crew's only window onto the world. Each agent decides its own objective and 2–5 queries; the crew shares one Parallel session per run. Parallel's excerpt-first results mean a whole run fits in one model context.
 - The three specialists run **in parallel** (fan-out) and the Head of Development synthesizes (fan-in). Steps stream to the browser over Server-Sent Events.
 - **Cloud Run** hosts the Node/Express service, built by **Cloud Build**. Both API keys live in **Secret Manager** and are injected at runtime; the service identity is granted `secretAccessor` on exactly those two secrets (**Cloud IAM**). The image never contains a key.
+- Since 2026-10-23 (after judging) Gemini runs on **Vertex AI** (`gemini-2.5-flash`) as the Cloud Run service identity, so only the Parallel key is in Secret Manager. The submitted text below describes the app as judged.
 - Front end is plain HTML/CSS/JS with Material 3 / Apple HIG sensibilities: one accent colour, quiet surfaces, full dark mode, reduced-motion support.
 
 ## Challenges we ran into
