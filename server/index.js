@@ -7,7 +7,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runCrew, MODEL, SPECIALISTS } from './agents.js';
+import { runCrew, MODEL, BACKEND, SPECIALISTS } from './agents.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,7 +18,7 @@ app.use(express.json({ limit: '32kb' }));
 app.use(express.static(path.join(__dirname, '..', 'public'), { extensions: ['html'], maxAge: '1h' }));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, model: MODEL, gemini: Boolean(process.env.GEMINI_API_KEY), parallel: Boolean(process.env.PARALLEL_API_KEY) });
+  res.json({ ok: true, model: MODEL, gemini: BACKEND === 'studio' ? Boolean(process.env.GEMINI_API_KEY) : Boolean(process.env.VERTEX_PROJECT), backend: BACKEND, parallel: Boolean(process.env.PARALLEL_API_KEY) });
 });
 
 app.get('/api/crew', (_req, res) => {

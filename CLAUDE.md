@@ -6,7 +6,7 @@ Hackathon entry (Agentic Cinema, Google Cloud, **Parallel track**). Built 10 Sep
 A multi-agent "development crew" on Gemini that researches a film/series logline with the Parallel Search API and writes a greenlight memo. Node 22, ES modules, Express, vanilla front end, Cloud Run.
 
 ## Ground rules (from the hackathon)
-- **AI only from Google Cloud.** Use `@google/genai` (google-genai). Never add another AI vendor's SDK or API.
+- **AI only from Google Cloud.** Use `@google/genai` (google-genai), on Vertex AI (ADR 0002). Never add another AI vendor's SDK or API.
 - **Parallel must be used at runtime**, through the official `parallel-web` SDK. It is the crew's only research tool. Do not replace it with Google Search grounding or any other search.
 - Keep the repo public, MIT licensed, and runnable from the README alone.
 
@@ -15,25 +15,27 @@ A multi-agent "development crew" on Gemini that researches a film/series logline
 - `server/agents.js` The crew. `SPECIALISTS` (prompts), `searchTool` (function declaration), `runSpecialist` (tool loop), `memoSchema` + `writeMemo` (structured output), `runCrew` (fan-out / fan-in). Every step calls `emit(event)`; the UI depends on those event shapes.
 - `server/parallel.js` Thin wrapper over `parallel-web`'s `client.search`. `PARALLEL_MOCK=1` returns fixtures in non-production only.
 - `public/` `index.html` (shell + `<template id="agent-card">`), `styles.css` (tokens at the top, light/dark via `prefers-color-scheme`), `app.js` (SSE parsing, crew cards, memo rendering, markdown export).
-- `deploy.sh` Cloud Run deploy. Secrets live in Secret Manager as `greenlight-gemini-api-key` and `greenlight-parallel-api-key` (region `us-central1`). The script takes `GCLOUD_ACCOUNT` and `GCLOUD_PROJECT` from the environment and passes `--account/--project` flags; never change the global gcloud config, and never commit account names or project ids.
+- `deploy.sh` Cloud Run deploy. The Parallel key lives in Secret Manager as `greenlight-parallel-api-key` (region `us-central1`). Gemini runs on Vertex AI as the service identity, no key (ADR 0002); `GENAI_BACKEND=studio` mounts `greenlight-gemini-api-key` again as the revert path. The script takes `GCLOUD_ACCOUNT`, `GCLOUD_PROJECT` and `VERTEX_PROJECT` from the environment and passes `--account/--project` flags; never change the global gcloud config, and never commit account names or project ids.
 
 ## Conventions
 - No build step, no framework, no TypeScript: speed of change beats tooling for this repo.
 - Design: Material 3 / Apple HIG feel. One accent (green), quiet surfaces, 16–24px radii, 200–500ms eased motion, full dark mode, `prefers-reduced-motion` respected. Everything the agents do must be visible in the UI (queries, sources, status) — the transparency is the product.
 - Escape all model output before it reaches `innerHTML` (`esc()` in app.js). The memo is model-generated JSON; treat it as untrusted.
-- Model id comes from `GEMINI_MODEL` (default `gemini-3.5-flash`). Verified available on this key: 3.5-flash, 3.8-flash, 2.5-flash.
+- Gemini client: `getAI()` in `server/agents.js` is the only one. `GENAI_BACKEND=vertex` (default) uses `VERTEX_PROJECT` / `VERTEX_LOCATION` (us-central1) with Application Default Credentials, or `VERTEX_ACCESS_TOKEN` for a local run; `studio` uses `GEMINI_API_KEY`. Project ids come from env only.
+- Model id comes from `GEMINI_MODEL` (default `gemini-2.5-flash`). On Vertex (checked 2026-10-23) 2.5-flash works; 3.5-flash and 3.8-flash are 404 in us-central1.
+- Vertex JSON mode can return a list where a string was asked for: `normaliseMemo()` coerces every memo field before the UI sees it.
 - Keep runs under ~60s: `MAX_TOOL_ROUNDS=2`, 2–5 queries per search, `max_chars_total` 12k per search.
 
 ## Local dev
 ```
-cp .env.example .env   # fill keys
+cp .env.example .env   # set VERTEX_PROJECT and PARALLEL_API_KEY
 npm run dev            # port 8080, --watch, loads .env
 PARALLEL_MOCK=1 MAX_TOOL_ROUNDS=1 npm run dev   # cheap UI iteration
 ```
 Smoke test without the UI: `node -e "import('./server/agents.js').then(m=>m.runCrew({logline:'...'},console.log))"`.
 
 ## Deploy
-`GCLOUD_ACCOUNT=… GCLOUD_PROJECT=… GEMINI_API_KEY=… PARALLEL_API_KEY=… ./deploy.sh` (keys optional after the first run). Cloud Build takes 3–5 minutes. Rotating a key = add a secret version, then redeploy so the new revision picks up `latest`.
+`GCLOUD_ACCOUNT=… GCLOUD_PROJECT=… VERTEX_PROJECT=… PARALLEL_API_KEY=… ./deploy.sh` (the key is optional after the first run). The runtime service account needs `roles/aiplatform.user` on `VERTEX_PROJECT`. Cloud Build takes 3 to 5 minutes. Rotating a key = add a secret version, then redeploy so the new revision picks up `latest`.
 
 ## Docs
 - `docs/decisions/` ADRs, one per non-obvious decision. Add one when you change architecture, a prompt strategy, or a partner integration.
@@ -49,3 +51,5 @@ Nothing we publish uses a bare name. Canonical rules + naming register live in t
 ## Billing note (2026-10-05)
 
 2026-10-05 billing note: this repo's GEMINI_API_KEY (.env) is the lab key in project gen-lang-client-0283960737, billed to account 01F1F8-CF914F-56C898. Its promo credit (which did cover Gemini API / AI Studio usage) expired on 5 Oct 2026. From 6 Oct every call made with this key bills the card. Observed 28 Sep to 4 Oct: about ₹50-60/day, mostly text-to-speech models (gemini 3.8/3.1/2.0 flash TTS, 2.5 pro TTS), Lyria music and flash text, from local runs. Before running anything heavy: confirm you want card spend, or move to Vertex on the credit-backed 01747A account (see the IgniteAI repo, docs/strategic/BILLING_MIGRATION_2026-09.md sections 6.9 to 6.10). A budget alert now exists on 01F1F8 ("Lab guardrail ₹500/mo", alerts only). Guardrails added 2026-10-05: this key's project is hard-capped at 150 generate requests/model/day and 2 long-running (Veo-type) jobs/model/day, so expect 429 RESOURCE_EXHAUSTED beyond that; to raise a cap, use the quota commands in the IgniteAI repo, docs/strategic/BILLING_MIGRATION_2026-09.md section 6.11.
+
+Update 2026-10-23: the AI Studio key path above is retired. Gemini now runs on Vertex AI in Nik's credit-backed Vertex project (ADR 0002), so local runs and production no longer use that lab key. The note above is kept as history.

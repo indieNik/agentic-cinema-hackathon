@@ -14,17 +14,73 @@
  * Every step is streamed to the UI as an event so the user can watch the crew work.
  */
 import { GoogleGenAI, Type } from '@google/genai';
+import { OAuth2Client } from 'google-auth-library';
 import { searchWeb } from './parallel.js';
 
-export const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+export const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const MAX_TOOL_ROUNDS = Number(process.env.MAX_TOOL_ROUNDS || 2);
+
+/**
+ * Gemini backend (ADR 0002), chosen by GENAI_BACKEND:
+ *   vertex (default) Vertex AI in VERTEX_PROJECT / VERTEX_LOCATION, as the Cloud Run service identity
+ *          (Application Default Credentials, no key). For a local run whose ADC has no access, set
+ *          VERTEX_ACCESS_TOKEN to an OAuth access token (`gcloud auth print-access-token`).
+ *   studio Gemini API with GEMINI_API_KEY (Google AI Studio). The revert path.
+ */
+export const BACKEND = (process.env.GENAI_BACKEND || 'vertex').trim().toLowerCase();
 
 let ai = null;
 function getAI() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
-  ai ??= new GoogleGenAI({ apiKey });
+  if (ai) return ai;
+  if (BACKEND === 'vertex') {
+    const project = (process.env.VERTEX_PROJECT || '').trim();
+    const location = (process.env.VERTEX_LOCATION || 'us-central1').trim();
+    if (!project) throw new Error('VERTEX_PROJECT is not set (GENAI_BACKEND=vertex)');
+    const token = (process.env.VERTEX_ACCESS_TOKEN || '').trim();
+    const googleAuthOptions = token ? { authClient: tokenClient(token) } : undefined;
+    ai = new GoogleGenAI({ vertexai: true, project, location, googleAuthOptions });
+  } else if (BACKEND === 'studio') {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set (GENAI_BACKEND=studio)');
+    ai = new GoogleGenAI({ apiKey });
+  } else {
+    throw new Error(`GENAI_BACKEND must be "vertex" or "studio", got "${BACKEND}"`);
+  }
   return ai;
+}
+
+function tokenClient(token) {
+  const client = new OAuth2Client();
+  client.setCredentials({ access_token: token });
+  return client;
+}
+
+/** Vertex's JSON mode can return a list where a string was asked for: join it back. */
+function str(v) {
+  if (Array.isArray(v)) return v.map(str).filter(Boolean).join(' ');
+  if (v == null) return '';
+  return typeof v === 'string' ? v : String(v);
+}
+function list(v) {
+  if (Array.isArray(v)) return v;
+  return v == null || v === '' ? [] : [v];
+}
+function normaliseMemo(m) {
+  const memo = { ...m };
+  for (const k of ['verdict', 'headline', 'title', 'logline', 'summary', 'budgetBand']) memo[k] = str(memo[k]);
+  memo.verdict = memo.verdict.toUpperCase();
+  memo.confidence = Math.max(0, Math.min(100, Number(memo.confidence) || 0));
+  const a = memo.audience && typeof memo.audience === 'object' ? memo.audience : {};
+  memo.audience = { primary: str(a.primary), secondary: str(a.secondary), platform: str(a.platform), positioning: str(a.positioning) };
+  memo.comps = list(memo.comps).map((c) => ({
+    title: str(c?.title), year: Number(c?.year) || str(c?.year), budget: str(c?.budget), performance: str(c?.performance),
+    whyComparable: str(c?.whyComparable), sourceUrl: str(c?.sourceUrl),
+  }));
+  memo.strengths = list(memo.strengths).map(str);
+  memo.nextSteps = list(memo.nextSteps).map(str);
+  memo.risks = list(memo.risks).map((r) => ({ risk: str(r?.risk), severity: str(r?.severity).toLowerCase(), mitigation: str(r?.mitigation) }));
+  memo.sources = list(memo.sources).map((x) => ({ title: str(x?.title), url: str(x?.url) }));
+  return memo;
 }
 
 const searchTool = {
@@ -247,8 +303,7 @@ Only cite URLs that appear in the sources list. Never invent titles or numbers; 
       temperature: 0.3,
     },
   });
-  const memo = JSON.parse(res.text);
-  memo.confidence = Math.max(0, Math.min(100, Number(memo.confidence) || 0));
+  const memo = normaliseMemo(JSON.parse(res.text));
   emit({ type: 'agent_status', agent: 'head', status: 'done' });
   return memo;
 }

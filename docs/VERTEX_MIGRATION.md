@@ -2,6 +2,8 @@
 
 Date: 2026-10-22
 
+Status: done 2026-10-23, see `docs/decisions/0002-gemini-on-vertex.md`. The steps below are kept as the record of the plan.
+
 This repo is public and its CLAUDE.md says never to commit account names or project ids. So this note names them by role. The real values are in Nik's private Mission Control repo (`CLAUDE.md`, data facts) and in ignite-ads PR #64.
 
 Why: the shared AI Studio lab key (in Nik's AI Studio lab project) has returned HTTP 402 "prepayment credits are depleted" since 2026-10-05. Local `.env` `GEMINI_API_KEY` is that lab key (see "Billing note" in `CLAUDE.md`). The Cloud Run service reads the Secret Manager secret `greenlight-gemini-api-key`; it may hold the same key or a different one, so check which project owns it before assuming it is the shared one. Vertex AI bills the Free Trial credit on Nik's production billing account (about Rs 24,000 left on 2026-10-09, ends 2026-12-26; after that, spend goes to the card).
